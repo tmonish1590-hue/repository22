@@ -1,36 +1,48 @@
-// Initialize the chess logic engine and the visual board
+// Initialize chess engine logic and visual board
 var board = null
 var game = new Chess()
 
 function onDragStart (source, piece, position, orientation) {
-  // Do not allow moving pieces if the game is already over
-  if (game.game_over()) return false
+  // Game over or computer's turn? Block the player from moving
+  if (game.game_over() || game.turn() === 'b') return false
 
-  // Only allow the correct side to move their own pieces
-  if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-      (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-    return false
-  }
+  // Only allow player to move White pieces
+  if (piece.search(/^b/) !== -1) return false
 }
 
-function onDrop (source, target) {
-  // Check if the move is legal according to chess rules
-  var move = game.move({
-    from: source,
-    to: target,
-    promotion: 'q' // Automatically promote pawns to a queen for simplicity
-  })
+function makeRandomMove () {
+  var possibleMoves = game.moves()
 
-  // If the move is illegal, snap the piece back to its original square
-  if (move === null) return 'snapback'
-}
+  // Game over check
+  if (possibleMoves.length === 0) return
 
-function onSnapEnd () {
-  // Update the board position after a piece is dropped
+  // Computer selects a random move from all available legal moves
+  var randomIdx = Math.floor(Math.random() * possibleMoves.length)
+  game.move(possibleMoves[randomIdx])
+  
+  // Update the visual board with the computer's move
   board.position(game.fen())
 }
 
-// Configuration options for the chessboard display
+function onDrop (source, target) {
+  // Check if your move is legal
+  var move = game.move({
+    from: source,
+    to: target,
+    promotion: 'q' 
+  })
+
+  // If illegal, snap piece back
+  if (move === null) return 'snapback'
+
+  // If legal, wait 250 milliseconds and let the computer play
+  window.setTimeout(makeRandomMove, 250)
+}
+
+function onSnapEnd () {
+  board.position(game.fen())
+}
+
 var config = {
   draggable: true,
   position: 'start',
@@ -38,6 +50,4 @@ var config = {
   onDrop: onDrop,
   onSnapEnd: onSnapEnd
 }
-
-// Render the board inside the HTML div
 board = Chessboard('board', config)
